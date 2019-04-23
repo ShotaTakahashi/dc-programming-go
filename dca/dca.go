@@ -12,7 +12,7 @@ var (
 	lambdaBar = 1.5
 )
 
-func DCA(xk float64, update func(x float64) float64) (float64, int) {
+func DCAlgorithm(xk float64, update func(x float64) float64) (float64, int) {
 	yk := update(xk)
 	if math.Abs(xk-yk) < eps {
 		return xk, Iter
@@ -20,10 +20,10 @@ func DCA(xk float64, update func(x float64) float64) (float64, int) {
 
 	Iter++
 	xk = yk
-	return DCA(xk, update)
+	return DCAlgorithm(xk, update)
 }
 
-func BDCA(
+func BDCAlgorithm(
 	xk float64,
 	update func(x float64) float64,
 	obj func(x float64) float64,
@@ -48,10 +48,10 @@ func BDCA(
 
 	Iter++
 	xk = yk
-	return BDCA(xk, update, obj)
+	return BDCAlgorithm(xk, update, obj)
 }
 
-func BDCAQuadratic(
+func BDCAlgorithmQuadratic(
 	xk float64,
 	update func(x float64) float64,
 	obj func(x float64) float64,
@@ -84,5 +84,5 @@ func BDCAQuadratic(
 
 	Iter++
 	xk = yk
-	return BDCAQuadratic(xk, update, obj, grad)
+	return BDCAlgorithmQuadratic(xk, update, obj, grad)
 }
