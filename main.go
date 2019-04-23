@@ -10,14 +10,17 @@ import (
 func main() {
 	var x0 = 27.0 / 125.0
 
+	dca.Iter = 0
 	t0 := time.Now()
 	opt, iter := dca.DCA(x0, update)
 	fmt.Println(time.Since(t0), opt, iter)
 
 	t0 = time.Now()
+	dca.Iter = 0
 	opt, iter = dca.BDCA(x0, update, obj)
 	fmt.Println(time.Since(t0), opt, iter)
 
+	dca.Iter = 0
 	t0 = time.Now()
 	opt, iter = dca.BDCAQuadratic(x0, update, obj, grad)
 	fmt.Println(time.Since(t0), opt, iter)

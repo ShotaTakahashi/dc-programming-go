@@ -4,16 +4,21 @@ import (
 	"math"
 )
 
-var iter = 0
-var alpha = 0.4
-var beta = 0.7
+var (
+	Iter      = 0
+	alpha     = 0.4
+	beta      = 0.7
+	eps       = 1e-10
+	lambdaBar = 1.5
+)
 
 func DCA(xk float64, update func(x float64) float64) (float64, int) {
 	yk := update(xk)
-	if math.Abs(xk-yk) < 1e-10 {
-		return xk, iter
+	if math.Abs(xk-yk) < eps {
+		return xk, Iter
 	}
-	iter++
+
+	Iter++
 	xk = yk
 	return DCA(xk, update)
 }
@@ -24,23 +29,25 @@ func BDCA(
 	obj func(x float64) float64,
 ) (float64, int) {
 	yk := update(xk)
-	if math.Abs(xk-yk) < 1e-10 {
-		return xk, iter
+	if math.Abs(xk-yk) < eps {
+		return xk, Iter
 	}
 
-	lambda := 1.5
+	lambda := lambdaBar
 	dk := yk - xk
 	objVal := obj(yk)
+
 	for obj(yk+lambda*dk) > objVal-alpha*lambda*dk*dk {
 		lambda *= beta
 	}
 
 	yk = yk + lambda*dk
-	if math.Abs(xk-yk) < 1e-10 {
-		return xk, iter
+	if math.Abs(xk-yk) < eps {
+		return xk, Iter
 	}
+
+	Iter++
 	xk = yk
-	iter++
 	return BDCA(xk, update, obj)
 }
 
@@ -51,11 +58,11 @@ func BDCAQuadratic(
 	grad func(x float64) float64,
 ) (float64, int) {
 	yk := update(xk)
-	if math.Abs(xk-yk) < 1e-10 {
-		return xk, iter
+	if math.Abs(xk-yk) < eps {
+		return xk, Iter
 	}
 
-	lambda := 1.5
+	lambda := lambdaBar
 	dk := yk - xk
 	objVal := obj(yk)
 	objLambda := obj(yk + lambda*dk)
@@ -63,7 +70,7 @@ func BDCAQuadratic(
 	optLambda := -gradDk * lambda * lambda / (2 * (objLambda - objVal - gradDk*lambda))
 
 	if optLambda > 0 && obj(yk+optLambda*dk) < objLambda {
-		lambda = math.Min(1.5, optLambda)
+		lambda = math.Min(lambdaBar, optLambda)
 	}
 
 	for obj(yk+lambda*dk) > objVal-alpha*lambda*dk*dk {
@@ -71,10 +78,11 @@ func BDCAQuadratic(
 	}
 
 	yk = yk + lambda*dk
-	if math.Abs(xk-yk) < 1e-10 {
-		return xk, iter
+	if math.Abs(xk-yk) < eps {
+		return xk, Iter
 	}
+
+	Iter++
 	xk = yk
-	iter++
 	return BDCAQuadratic(xk, update, obj, grad)
 }
