@@ -2,19 +2,25 @@ package dca
 
 import (
 	"math"
+
+	"github.com/gonum/matrix/mat64"
 )
 
 var (
 	Iter      = 0
+	STOP      = 100
 	alpha     = 0.4
 	beta      = 0.7
 	eps       = 1e-10
 	lambdaBar = 1.5
 )
 
-func DCAlgorithm(xk float64, update func(x float64) float64) (float64, int) {
+func DCAlgorithm(xk *mat64.Dense, update func(x *mat64.Dense) *mat64.Dense) (*mat64.Dense, int) {
 	yk := update(xk)
-	if math.Abs(xk-yk) < eps {
+
+	diff := mat64.NewDense(xk.RawMatrix().Rows, xk.RawMatrix().Cols, nil)
+	diff.Sub(xk, yk)
+	if mat64.Norm(diff, 2) < eps || Iter > STOP {
 		return xk, Iter
 	}
 
@@ -24,25 +30,35 @@ func DCAlgorithm(xk float64, update func(x float64) float64) (float64, int) {
 }
 
 func BDCAlgorithm(
-	xk float64,
-	update func(x float64) float64,
-	obj func(x float64) float64,
-) (float64, int) {
+	xk *mat64.Dense,
+	update func(x *mat64.Dense) *mat64.Dense,
+	obj func(x *mat64.Dense) float64,
+) (*mat64.Dense, int) {
 	yk := update(xk)
-	if math.Abs(xk-yk) < eps {
+
+	dk := mat64.NewDense(xk.RawMatrix().Rows, xk.RawMatrix().Cols, nil)
+	dk.Sub(xk, yk)
+	dkNorm := mat64.Norm(dk, 2)
+	if dkNorm < eps || Iter > STOP {
 		return xk, Iter
 	}
 
 	lambda := lambdaBar
-	dk := yk - xk
 	objVal := obj(yk)
-
-	for obj(yk+lambda*dk) > objVal-alpha*lambda*dk*dk {
+	newYk := mat64.NewDense(xk.RawMatrix().Rows, xk.RawMatrix().Cols, nil)
+	newDk := mat64.NewDense(xk.RawMatrix().Rows, xk.RawMatrix().Cols, nil)
+	newDk.Scale(lambda, dk)
+	newYk.Add(yk, newDk)
+	for obj(newYk) > objVal-alpha*lambda*dkNorm {
 		lambda *= beta
+		newDk.Scale(lambda, dk)
+		newYk.Add(yk, newDk)
 	}
-
-	yk = yk + lambda*dk
-	if math.Abs(xk-yk) < eps {
+	dk.Scale(lambda, dk)
+	yk.Add(yk, dk)
+	diff := mat64.NewDense(xk.RawMatrix().Rows, xk.RawMatrix().Cols, nil)
+	diff.Sub(xk, yk)
+	if mat64.Norm(diff, 2) < eps {
 		return xk, Iter
 	}
 

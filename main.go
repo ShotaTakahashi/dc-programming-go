@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"math"
 	"time"
+
+	"github.com/gonum/matrix/mat64"
 )
 
 func main() {
-	var x0 = 27.0 / 125.0
+	x0Elm := []float64{27.0 / 125.0}
+	x0 := mat64.NewDense(1, 1, x0Elm)
 
 	dca.Iter = 0
 	t0 := time.Now()
@@ -22,16 +25,23 @@ func main() {
 
 	dca.Iter = 0
 	t0 = time.Now()
-	opt, iter = dca.BDCAlgorithmQuadratic(x0, update, obj, grad)
+	//opt, iter = dca.BDCAlgorithmQuadratic(x0, update, obj, grad)
 	fmt.Println(time.Since(t0), opt, iter)
 }
 
-func update(x float64) float64 {
-	return math.Pow(x, 1.0/3.0)
+func update(x *mat64.Dense) *mat64.Dense {
+	resultElm := make([]float64, 1)
+	result := mat64.NewDense(1, 1, resultElm)
+	result.Apply(func(i, j int, v float64) float64 {
+		return math.Pow(v, 1.0/3.0)
+	}, x)
+	return result
 }
 
-func obj(x float64) float64 {
-	return math.Pow(x, 4)/4.0 - math.Pow(x, 2)/2.0
+func obj(x *mat64.Dense) float64 {
+	xElm := x.RawMatrix().Data
+	x0 := xElm[0]
+	return math.Pow(x0, 4)/4.0 - math.Pow(x0, 2)/2.0
 }
 
 func grad(x float64) float64 {
