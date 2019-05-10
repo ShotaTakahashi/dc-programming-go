@@ -11,7 +11,7 @@ import (
 
 func main() {
 	x0Elm := []float64{27.0 / 125.0}
-	x0 := mat64.NewDense(1, 1, x0Elm)
+	x0 := mat64.NewVector(1, x0Elm)
 
 	dca.Iter = 0
 	t0 := time.Now()
@@ -25,25 +25,28 @@ func main() {
 
 	dca.Iter = 0
 	t0 = time.Now()
-	//opt, iter = dca.BDCAlgorithmQuadratic(x0, update, obj, grad)
+	opt, iter = dca.BDCAlgorithmQuadratic(x0, update, obj, grad)
 	fmt.Println(time.Since(t0), opt, iter)
 }
 
-func update(x *mat64.Dense) *mat64.Dense {
-	resultElm := make([]float64, 1)
-	result := mat64.NewDense(1, 1, resultElm)
-	result.Apply(func(i, j int, v float64) float64 {
-		return math.Pow(v, 1.0/3.0)
-	}, x)
+func update(x *mat64.Vector) *mat64.Vector {
+	result := mat64.NewVector(1, nil)
+	for i := 0; i < x.Len(); i++ {
+		result.SetVec(i, math.Pow(x.At(i, 0), 1.0/3.0))
+	}
 	return result
 }
 
-func obj(x *mat64.Dense) float64 {
-	xElm := x.RawMatrix().Data
+func obj(x *mat64.Vector) float64 {
+	xElm := x.RawVector().Data
 	x0 := xElm[0]
 	return math.Pow(x0, 4)/4.0 - math.Pow(x0, 2)/2.0
 }
 
-func grad(x float64) float64 {
-	return math.Pow(x, 3) - x
+func grad(x *mat64.Vector) *mat64.Vector {
+	result := mat64.NewVector(1, nil)
+	result.MulElemVec(x, x)
+	result.MulElemVec(result, x)
+	result.SubVec(result, x)
+	return result
 }

@@ -1,9 +1,8 @@
 package dca
 
 import (
-	"math"
-
 	"github.com/gonum/matrix/mat64"
+	"math"
 )
 
 var (
@@ -11,16 +10,16 @@ var (
 	STOP      = 100
 	alpha     = 0.4
 	beta      = 0.7
-	eps       = 1e-10
+	eps       = 1e-20
 	lambdaBar = 1.5
 )
 
-func DCAlgorithm(xk *mat64.Dense, update func(x *mat64.Dense) *mat64.Dense) (*mat64.Dense, int) {
+func DCAlgorithm(xk *mat64.Vector, update func(x *mat64.Vector) *mat64.Vector) (*mat64.Vector, int) {
 	yk := update(xk)
 
-	diff := mat64.NewDense(xk.RawMatrix().Rows, xk.RawMatrix().Cols, nil)
-	diff.Sub(xk, yk)
-	if mat64.Norm(diff, 2) < eps || Iter > STOP {
+	diff := mat64.NewVector(xk.RawVector().Inc, nil)
+	diff.SubVec(xk, yk)
+	if mat64.Dot(diff, diff) < eps || Iter > STOP {
 		return xk, Iter
 	}
 
@@ -30,75 +29,86 @@ func DCAlgorithm(xk *mat64.Dense, update func(x *mat64.Dense) *mat64.Dense) (*ma
 }
 
 func BDCAlgorithm(
-	xk *mat64.Dense,
-	update func(x *mat64.Dense) *mat64.Dense,
-	obj func(x *mat64.Dense) float64,
-) (*mat64.Dense, int) {
+	xk *mat64.Vector,
+	update func(x *mat64.Vector) *mat64.Vector,
+	obj func(x *mat64.Vector) float64,
+) (*mat64.Vector, int) {
 	yk := update(xk)
 
-	dk := mat64.NewDense(xk.RawMatrix().Rows, xk.RawMatrix().Cols, nil)
-	dk.Sub(xk, yk)
-	dkNorm := mat64.Norm(dk, 2)
+	dk := mat64.NewVector(xk.RawVector().Inc, nil)
+	dk.SubVec(xk, yk)
+	dkNorm := mat64.Dot(dk, dk)
 	if dkNorm < eps || Iter > STOP {
 		return xk, Iter
 	}
 
 	lambda := lambdaBar
 	objVal := obj(yk)
-	newYk := mat64.NewDense(xk.RawMatrix().Rows, xk.RawMatrix().Cols, nil)
-	newDk := mat64.NewDense(xk.RawMatrix().Rows, xk.RawMatrix().Cols, nil)
-	newDk.Scale(lambda, dk)
-	newYk.Add(yk, newDk)
+	newYk := mat64.NewVector(xk.RawVector().Inc, nil)
+	newDk := mat64.NewVector(xk.RawVector().Inc, nil)
+	newDk.ScaleVec(lambda, dk)
+	newYk.AddVec(yk, newDk)
 	for obj(newYk) > objVal-alpha*lambda*dkNorm {
 		lambda *= beta
-		newDk.Scale(lambda, dk)
-		newYk.Add(yk, newDk)
+		newDk.ScaleVec(lambda, dk)
+		newYk.AddVec(yk, newDk)
 	}
-	dk.Scale(lambda, dk)
-	yk.Add(yk, dk)
-	diff := mat64.NewDense(xk.RawMatrix().Rows, xk.RawMatrix().Cols, nil)
-	diff.Sub(xk, yk)
+	dk.ScaleVec(lambda, dk)
+	yk.AddVec(yk, dk)
+	diff := mat64.NewVector(xk.RawVector().Inc, nil)
+	diff.SubVec(xk, yk)
 	if mat64.Norm(diff, 2) < eps {
 		return xk, Iter
 	}
 
 	Iter++
-	xk = yk
-	return BDCAlgorithm(xk, update, obj)
+	return BDCAlgorithm(yk, update, obj)
 }
 
 func BDCAlgorithmQuadratic(
-	xk float64,
-	update func(x float64) float64,
-	obj func(x float64) float64,
-	grad func(x float64) float64,
-) (float64, int) {
+	xk *mat64.Vector,
+	update func(x *mat64.Vector) *mat64.Vector,
+	obj func(x *mat64.Vector) float64,
+	grad func(x *mat64.Vector) *mat64.Vector,
+) (*mat64.Vector, int) {
 	yk := update(xk)
-	if math.Abs(xk-yk) < eps {
+
+	dk := mat64.NewVector(xk.RawVector().Inc, nil)
+	dk.SubVec(xk, yk)
+	dkNorm := mat64.Dot(dk, dk)
+	if dkNorm < eps || Iter > STOP {
 		return xk, Iter
 	}
 
 	lambda := lambdaBar
-	dk := yk - xk
+	newYk := mat64.NewVector(xk.RawVector().Inc, nil)
+	newDk := mat64.NewVector(xk.RawVector().Inc, nil)
+	newDk.ScaleVec(lambda, dk)
+	newYk.AddVec(yk, newDk)
 	objVal := obj(yk)
-	objLambda := obj(yk + lambda*dk)
-	gradDk := grad(yk) * dk
+	objLambda := obj(newYk)
+	gradDk := mat64.Dot(grad(yk), dk)
 	optLambda := -gradDk * lambda * lambda / (2 * (objLambda - objVal - gradDk*lambda))
 
-	if optLambda > 0 && obj(yk+optLambda*dk) < objLambda {
+	newDk.ScaleVec(optLambda, dk)
+	newYk.AddVec(yk, newDk)
+	if optLambda > 0 && obj(newYk) < objLambda {
 		lambda = math.Min(lambdaBar, optLambda)
 	}
 
-	for obj(yk+lambda*dk) > objVal-alpha*lambda*dk*dk {
+	for obj(newYk) > objVal-alpha*lambda*dkNorm {
 		lambda *= beta
+		newDk.ScaleVec(lambda, dk)
+		newYk.AddVec(yk, newDk)
 	}
-
-	yk = yk + lambda*dk
-	if math.Abs(xk-yk) < eps {
+	dk.ScaleVec(lambda, dk)
+	yk.AddVec(yk, dk)
+	diff := mat64.NewVector(xk.RawVector().Inc, nil)
+	diff.SubVec(xk, yk)
+	if mat64.Dot(diff, diff) < eps {
 		return xk, Iter
 	}
 
 	Iter++
-	xk = yk
-	return BDCAlgorithmQuadratic(xk, update, obj, grad)
+	return BDCAlgorithmQuadratic(yk, update, obj, grad)
 }
