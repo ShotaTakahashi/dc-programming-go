@@ -18,8 +18,8 @@ func main() {
 	opt, iter := dca.DCAlgorithm(x0, update)
 	fmt.Println(time.Since(t0), opt, iter)
 
-	t0 = time.Now()
 	dca.Iter = 0
+	t0 = time.Now()
 	opt, iter = dca.BDCAlgorithm(x0, update, obj)
 	fmt.Println(time.Since(t0), opt, iter)
 
@@ -38,9 +38,8 @@ func update(x *mat64.Vector) *mat64.Vector {
 }
 
 func obj(x *mat64.Vector) float64 {
-	xElm := x.RawVector().Data
-	x0 := xElm[0]
-	return math.Pow(x0, 4)/4.0 - math.Pow(x0, 2)/2.0
+	xElm := x.RawVector().Data[0]
+	return math.Pow(xElm, 4)/4.0 - math.Pow(xElm, 2)/2.0
 }
 
 func grad(x *mat64.Vector) *mat64.Vector {

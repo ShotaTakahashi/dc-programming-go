@@ -17,9 +17,9 @@ var (
 func DCAlgorithm(xk *mat64.Vector, update func(x *mat64.Vector) *mat64.Vector) (*mat64.Vector, int) {
 	yk := update(xk)
 
-	diff := mat64.NewVector(xk.RawVector().Inc, nil)
-	diff.SubVec(xk, yk)
-	if mat64.Dot(diff, diff) < eps || Iter > STOP {
+	dk := mat64.NewVector(xk.RawVector().Inc, nil)
+	dk.SubVec(xk, yk)
+	if mat64.Dot(dk, dk) < eps || Iter > STOP {
 		return xk, Iter
 	}
 
@@ -44,25 +44,27 @@ func BDCAlgorithm(
 
 	lambda := lambdaBar
 	objVal := obj(yk)
-	newYk := mat64.NewVector(xk.RawVector().Inc, nil)
-	newDk := mat64.NewVector(xk.RawVector().Inc, nil)
-	newDk.ScaleVec(lambda, dk)
-	newYk.AddVec(yk, newDk)
-	for obj(newYk) > objVal-alpha*lambda*dkNorm {
+
+	dkNew := mat64.NewVector(xk.RawVector().Inc, nil)
+	dkNew.ScaleVec(lambda, dk)
+
+	xkNew := mat64.NewVector(xk.RawVector().Inc, nil)
+	xkNew.AddVec(yk, dkNew)
+
+	for obj(xkNew) > objVal-alpha*lambda*dkNorm {
 		lambda *= beta
-		newDk.ScaleVec(lambda, dk)
-		newYk.AddVec(yk, newDk)
+		dkNew.ScaleVec(lambda, dk)
+		xkNew.AddVec(yk, dkNew)
 	}
-	dk.ScaleVec(lambda, dk)
-	yk.AddVec(yk, dk)
+
 	diff := mat64.NewVector(xk.RawVector().Inc, nil)
-	diff.SubVec(xk, yk)
-	if mat64.Norm(diff, 2) < eps {
+	diff.SubVec(xk, xkNew)
+	if mat64.Dot(diff, diff) < eps {
 		return xk, Iter
 	}
 
 	Iter++
-	return BDCAlgorithm(yk, update, obj)
+	return BDCAlgorithm(xkNew, update, obj)
 }
 
 func BDCAlgorithmQuadratic(
@@ -81,34 +83,36 @@ func BDCAlgorithmQuadratic(
 	}
 
 	lambda := lambdaBar
-	newYk := mat64.NewVector(xk.RawVector().Inc, nil)
-	newDk := mat64.NewVector(xk.RawVector().Inc, nil)
-	newDk.ScaleVec(lambda, dk)
-	newYk.AddVec(yk, newDk)
 	objVal := obj(yk)
-	objLambda := obj(newYk)
+
+	dkNew := mat64.NewVector(xk.RawVector().Inc, nil)
+	dkNew.ScaleVec(lambda, dk)
+
+	xkNew := mat64.NewVector(xk.RawVector().Inc, nil)
+	xkNew.AddVec(yk, dkNew)
+
+	objLambda := obj(xkNew)
 	gradDk := mat64.Dot(grad(yk), dk)
 	optLambda := -gradDk * lambda * lambda / (2 * (objLambda - objVal - gradDk*lambda))
 
-	newDk.ScaleVec(optLambda, dk)
-	newYk.AddVec(yk, newDk)
-	if optLambda > 0 && obj(newYk) < objLambda {
+	dkNew.ScaleVec(optLambda, dk)
+	xkNew.AddVec(yk, dkNew)
+	if optLambda > 0 && obj(dkNew) < objLambda {
 		lambda = math.Min(lambdaBar, optLambda)
 	}
 
-	for obj(newYk) > objVal-alpha*lambda*dkNorm {
+	for obj(xkNew) > objVal-alpha*lambda*dkNorm {
 		lambda *= beta
-		newDk.ScaleVec(lambda, dk)
-		newYk.AddVec(yk, newDk)
+		dkNew.ScaleVec(lambda, dk)
+		xkNew.AddVec(yk, dkNew)
 	}
-	dk.ScaleVec(lambda, dk)
-	yk.AddVec(yk, dk)
+
 	diff := mat64.NewVector(xk.RawVector().Inc, nil)
-	diff.SubVec(xk, yk)
+	diff.SubVec(xk, xkNew)
 	if mat64.Dot(diff, diff) < eps {
 		return xk, Iter
 	}
 
 	Iter++
-	return BDCAlgorithmQuadratic(yk, update, obj, grad)
+	return BDCAlgorithmQuadratic(xkNew, update, obj, grad)
 }
