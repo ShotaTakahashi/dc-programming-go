@@ -1,21 +1,24 @@
 package dca
 
-import "math"
+import (
+	"github.com/gonum/matrix/mat64"
+	"math"
+)
 
 type proximalDCAlgorithmWithExtrapolation struct {
-	xk               float64
-	xkOld            float64
-	proximalOperator func(yk, xi float64) float64
-	subGradient      func(xk float64) float64
+	xk               *mat64.Vector
+	xkOld            *mat64.Vector
+	proximalOperator func(yk, xi *mat64.Vector) *mat64.Vector
+	subGradient      func(xk *mat64.Vector) *mat64.Vector
 	beta             float64
 	theta            float64
 	thetaOld         float64
 }
 
 func MakeProximalDCAlgorithmWithExtrapolation(
-	x0 float64,
-	proximalOperator func(yk, xi float64) float64,
-	subGradient func(xk float64) float64,
+	x0 *mat64.Vector,
+	proximalOperator func(yk, xi *mat64.Vector) *mat64.Vector,
+	subGradient func(xk *mat64.Vector) *mat64.Vector,
 ) proximalDCAlgorithmWithExtrapolation {
 	return proximalDCAlgorithmWithExtrapolation{
 		xk:               x0,
@@ -28,14 +31,23 @@ func MakeProximalDCAlgorithmWithExtrapolation(
 	}
 }
 
-func (p proximalDCAlgorithmWithExtrapolation) pDCA() float64 {
-	yk := p.xk + p.beta*(p.xk-p.xkOld)
+func (p proximalDCAlgorithmWithExtrapolation) PDCA() *mat64.Vector {
+	N := p.xk.Len()
+
+	yk := mat64.NewVector(N, nil)
+	diff := mat64.NewVector(N, nil)
+	diff.SubVec(p.xk, p.xkOld)
+	diff.ScaleVec(p.beta, diff)
+	yk.AddVec(yk, diff)
+
 	xi := p.subGradient(p.xk)
+
 	xk := p.proximalOperator(yk, xi)
-	if math.Abs(xk-p.xk)/math.Max(1.0, math.Abs(xk)) < 1e-5 {
+	diff.SubVec(xk, p.xk)
+	if mat64.Norm(diff, 2)/math.Max(1.0, mat64.Norm(xk, 2)) < 1e-5 {
 		return xk
 	}
 	p.xkOld = p.xk
 	p.xk = xk
-	return p.pDCA()
+	return p.PDCA()
 }
