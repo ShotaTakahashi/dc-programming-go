@@ -25,12 +25,13 @@ var (
 )
 
 func main() {
+	dca.Iter = 0
 	x0 := mat64.NewVector(N, nil)
 	problem := dca.MakeProximalDCAlgorithmWithExtrapolation(x0, proximalOperator, subGradient)
 
 	t0 := time.Now()
 	opt := problem.PDCA()
-	fmt.Println(time.Since(t0), opt)
+	fmt.Println(time.Since(t0), objectFunc(opt), dca.Iter)
 }
 
 func proximalOperator(yk, xi *mat64.Vector) *mat64.Vector {
@@ -118,4 +119,11 @@ func maxEigenvalue() float64 {
 		log.Fatal("Eigendecomposition failed")
 	}
 	return floats.Max(eig.Values(nil))
+}
+
+func objectFunc(x *mat64.Vector) float64 {
+	leastSquare := mat64.NewVector(M, nil)
+	leastSquare.MulVec(A, x)
+	leastSquare.SubVec(leastSquare, b)
+	return mat64.Dot(leastSquare, leastSquare)*0.5 + LAMBDA*(mat64.Norm(x, 1)-mat64.Norm(x, 2))
 }

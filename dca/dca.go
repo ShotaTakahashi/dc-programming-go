@@ -7,7 +7,7 @@ import (
 
 var (
 	Iter      = 0
-	STOP      = 100
+	STOP      = 1000
 	alpha     = 0.4
 	beta      = 0.7
 	eps       = 1e-20
