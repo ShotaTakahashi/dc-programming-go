@@ -1,6 +1,7 @@
 package dca
 
 import (
+	"fmt"
 	"github.com/gonum/matrix/mat64"
 	"math"
 )
@@ -38,7 +39,13 @@ func MakeProximalDCAlgorithmWithExtrapolation(
 }
 
 func (p proximalDCAlgorithmWithExtrapolation) PDCA() *mat64.Vector {
-	p.betaUpdate()
+	p.thetaRestart()
+
+	p.beta = (p.thetaOld - 1.0) / p.theta
+
+	theta := (1.0 + math.Pow(1.0+4.0*p.theta*p.theta, 1.0/2.0)) * 0.5
+	p.thetaOld = p.theta
+	p.theta = theta
 
 	diff := mat64.NewVector(p.N, nil)
 	diff.SubVec(p.xk, p.xkOld)
@@ -62,18 +69,6 @@ func (p proximalDCAlgorithmWithExtrapolation) PDCA() *mat64.Vector {
 	return p.PDCA()
 }
 
-func (p proximalDCAlgorithmWithExtrapolation) betaUpdate() {
-	p.thetaRestart()
-	p.beta = (p.thetaOld - 1.0) / p.theta
-	p.thetaUpdate()
-}
-
-func (p proximalDCAlgorithmWithExtrapolation) thetaUpdate() {
-	theta := (1.0 + math.Pow(1.0+4.0*p.theta*p.theta, 1.0/2.0)) * 0.5
-	p.thetaOld = p.theta
-	p.theta = theta
-}
-
 func (p proximalDCAlgorithmWithExtrapolation) thetaRestart() {
 
 	ykXk := mat64.NewVector(p.N, nil)
@@ -83,6 +78,7 @@ func (p proximalDCAlgorithmWithExtrapolation) thetaRestart() {
 	xkXk.SubVec(p.xk, p.xkOld)
 
 	if mat64.Dot(ykXk, xkXk) > 0 || IterTheta > 200 {
+		fmt.Println("--")
 		p.theta = 1.0
 		p.thetaOld = 1.0
 		if IterTheta > 200 {

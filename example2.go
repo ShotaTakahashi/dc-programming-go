@@ -28,7 +28,7 @@ func main() {
 	dca.Iter = 0
 	x0 := mat64.NewVector(N, nil)
 	problem := dca.MakeProximalDCAlgorithmWithExtrapolation(x0, proximalOperator, subGradient)
-
+	fmt.Println(L)
 	t0 := time.Now()
 	opt := problem.PDCA()
 	fmt.Println(time.Since(t0), objectFunc(opt), dca.Iter)
@@ -36,22 +36,22 @@ func main() {
 
 func proximalOperator(yk, xi *mat64.Vector) *mat64.Vector {
 	xk := mat64.NewVector(N, nil)
-	prox := mat64.NewVector(N, nil)
-	prox.ScaleVec(L, yk)
-	prox.AddVec(prox, xi)
+	proximal := mat64.NewVector(N, nil)
+	proximal.ScaleVec(L, yk)
+	proximal.AddVec(proximal, xi)
 
 	gradLeastSquare := mat64.NewVector(N, nil)
-	temp := mat64.NewVector(M, nil)
-	temp.MulVec(A, yk)
-	temp.SubVec(temp, b)
-	gradLeastSquare.MulVec(A.T(), temp)
-	prox.SubVec(prox, gradLeastSquare)
+	Ay := mat64.NewVector(M, nil)
+	Ay.MulVec(A, yk)
+	Ay.SubVec(Ay, b)
+	gradLeastSquare.MulVec(A.T(), Ay)
+	proximal.SubVec(proximal, gradLeastSquare)
 	LambdaEps := LAMBDA / EPS
-	for i := 0; i < xk.Len(); i++ {
-		if prox.At(i, 0) > LambdaEps {
-			xk.SetVec(i, prox.At(i, 0)-LambdaEps)
-		} else if prox.At(i, 0) < LambdaEps {
-			xk.SetVec(i, prox.At(i, 0)+LambdaEps)
+	for i := 0; i < N; i++ {
+		if proximal.At(i, 0) > LambdaEps {
+			xk.SetVec(i, proximal.At(i, 0)-LambdaEps)
+		} else if proximal.At(i, 0) < LambdaEps {
+			xk.SetVec(i, proximal.At(i, 0)+LambdaEps)
 		}
 	}
 	xk.ScaleVec(1/L, xk)
@@ -61,7 +61,7 @@ func proximalOperator(yk, xi *mat64.Vector) *mat64.Vector {
 func subGradient(x *mat64.Vector) *mat64.Vector {
 	xNorm := mat64.Norm(x, 2)
 	if xNorm == 0 {
-		return mat64.NewVector(N, make([]float64, N))
+		return x
 	}
 	subGradient := mat64.NewVector(N, nil)
 	subGradient.ScaleVec(LAMBDA/xNorm, x)
@@ -74,6 +74,12 @@ func makeMatrixA() *mat64.Dense {
 		data[i] = rand.NormFloat64()
 	}
 	A := mat64.NewDense(M, N, data)
+	for j := 0; j < N; j++ {
+		norm := mat64.Norm(A.ColView(j), 2)
+		for i := 0; i < M; i++ {
+			A.Set(i, j, A.At(i, j)/norm)
+		}
+	}
 	return A
 }
 
