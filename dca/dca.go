@@ -36,7 +36,7 @@ func BDCAlgorithm(
 	yk := update(xk)
 
 	dk := mat64.NewVector(xk.RawVector().Inc, nil)
-	dk.SubVec(xk, yk)
+	dk.SubVec(yk, xk)
 	dkNorm := mat64.Dot(dk, dk)
 	if dkNorm < eps || Iter > STOP {
 		return xk, Iter
@@ -76,7 +76,7 @@ func BDCAlgorithmQuadratic(
 	yk := update(xk)
 
 	dk := mat64.NewVector(xk.RawVector().Inc, nil)
-	dk.SubVec(xk, yk)
+	dk.SubVec(yk, xk)
 	dkNorm := mat64.Dot(dk, dk)
 	if dkNorm < eps || Iter > STOP {
 		return xk, Iter
@@ -97,7 +97,7 @@ func BDCAlgorithmQuadratic(
 
 	dkNew.ScaleVec(optLambda, dk)
 	xkNew.AddVec(yk, dkNew)
-	if optLambda > 0 && obj(dkNew) < objLambda {
+	if optLambda > 0 && obj(xkNew) < objLambda {
 		lambda = math.Min(lambdaBar, optLambda)
 	}
 
