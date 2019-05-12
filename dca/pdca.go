@@ -1,7 +1,6 @@
 package dca
 
 import (
-	"fmt"
 	"github.com/gonum/matrix/mat64"
 	"math"
 )
@@ -78,7 +77,6 @@ func (p proximalDCAlgorithmWithExtrapolation) thetaRestart() {
 	xkXk.SubVec(p.xk, p.xkOld)
 
 	if mat64.Dot(ykXk, xkXk) > 0 || IterTheta > 200 {
-		fmt.Println("--")
 		p.theta = 1.0
 		p.thetaOld = 1.0
 		if IterTheta > 200 {
