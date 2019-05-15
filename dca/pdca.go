@@ -71,20 +71,19 @@ func (p *proximalDCAlgorithmWithExtrapolation) betaUpdate() {
 }
 
 func (p *proximalDCAlgorithmWithExtrapolation) thetaUpdate() {
-	theta := (1.0 + math.Pow(1.0+4.0*p.theta*p.theta, 1.0/2.0)) * 0.5
+	theta := (1.0 + math.Pow(1.0+4.0*p.theta*p.theta, 0.5)) * 0.5
 	p.thetaOld = p.theta
 	p.theta = theta
 }
 
 func (p *proximalDCAlgorithmWithExtrapolation) thetaRestart() {
+	yk := mat64.NewVector(p.xk.Len(), nil)
+	yk.SubVec(p.yk, p.xk)
 
-	ykXk := mat64.NewVector(p.xk.Len(), nil)
-	ykXk.SubVec(p.yk, p.xk)
+	xk := mat64.NewVector(p.xk.Len(), nil)
+	xk.SubVec(p.xk, p.xkOld)
 
-	xkXk := mat64.NewVector(p.xk.Len(), nil)
-	xkXk.SubVec(p.xk, p.xkOld)
-
-	if mat64.Dot(ykXk, xkXk) > 0 || IterTheta > 200 {
+	if mat64.Dot(yk, xk) > 0 || IterTheta > 200 {
 		p.theta = 1.0
 		p.thetaOld = 1.0
 		if IterTheta > 200 {
