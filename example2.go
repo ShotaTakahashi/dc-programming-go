@@ -17,8 +17,7 @@ var (
 	N        = 256 * i
 	M        = 72 * i
 	SPARSITY = 8 * i
-	LAMBDA   = 1e-3
-	EPS      = 1.0
+	Lambda   = 1e-3
 	A        = makeMatrixA()
 	b        = makeVectorB()
 	L        = maxEigenvalue()
@@ -35,23 +34,25 @@ func main() {
 }
 
 func proximalOperator(yk, xi *mat64.Vector) *mat64.Vector {
-	xk := mat64.NewVector(N, nil)
-	proximal := mat64.NewVector(N, nil)
-	proximal.ScaleVec(L, yk)
-	proximal.AddVec(proximal, xi)
-
-	gradLeastSquare := mat64.NewVector(N, nil)
 	Ay := mat64.NewVector(M, nil)
 	Ay.MulVec(A, yk)
 	Ay.SubVec(Ay, b)
+
+	gradLeastSquare := mat64.NewVector(N, nil)
 	gradLeastSquare.MulVec(A.T(), Ay)
+
+	proximal := mat64.NewVector(N, nil)
+	proximal.ScaleVec(L, yk)
+	proximal.AddVec(proximal, xi)
 	proximal.SubVec(proximal, gradLeastSquare)
-	LambdaEps := LAMBDA / EPS
+
+	xk := mat64.NewVector(N, nil)
 	for i := 0; i < N; i++ {
-		if proximal.At(i, 0) > LambdaEps {
-			xk.SetVec(i, proximal.At(i, 0)-LambdaEps)
-		} else if proximal.At(i, 0) < LambdaEps {
-			xk.SetVec(i, proximal.At(i, 0)+LambdaEps)
+		if proximal.At(i, 0) > Lambda {
+			xk.SetVec(i, proximal.At(i, 0)-Lambda)
+		}
+		if proximal.At(i, 0) < Lambda {
+			xk.SetVec(i, proximal.At(i, 0)+Lambda)
 		}
 	}
 	xk.ScaleVec(1/L, xk)
@@ -64,12 +65,13 @@ func subGradient(x *mat64.Vector) *mat64.Vector {
 		return x
 	}
 	subGradient := mat64.NewVector(N, nil)
-	subGradient.ScaleVec(LAMBDA/xNorm, x)
+	subGradient.ScaleVec(Lambda/xNorm, x)
 	return subGradient
 }
 
 func makeMatrixA() *mat64.Dense {
 	data := make([]float64, N*M)
+	rand.Seed(42)
 	for i := range data {
 		data[i] = rand.NormFloat64()
 	}
@@ -84,12 +86,14 @@ func makeMatrixA() *mat64.Dense {
 }
 
 func makeVectorB() *mat64.Vector {
-	b := mat64.NewVector(M, nil)
 	data := make([]float64, N)
+	rand.Seed(42)
 	for _, i := range sampling(N) {
 		data[i] = rand.NormFloat64()
 	}
 	y := mat64.NewVector(N, data)
+
+	b := mat64.NewVector(M, nil)
 	b.MulVec(A, y)
 	b.AddVec(b, makeRandomVector(M))
 	return b
@@ -111,6 +115,7 @@ func sampling(size int) []int {
 	for i := 0; i < size; i++ {
 		sample = append(sample, i)
 	}
+	rand.Seed(42)
 	rand.Shuffle(size, func(i, j int) { sample[i], sample[j] = sample[j], sample[i] })
 	sample = sample[:SPARSITY]
 	return sample
@@ -131,5 +136,5 @@ func objectFunc(x *mat64.Vector) float64 {
 	leastSquare := mat64.NewVector(M, nil)
 	leastSquare.MulVec(A, x)
 	leastSquare.SubVec(leastSquare, b)
-	return mat64.Dot(leastSquare, leastSquare)*0.5 + LAMBDA*(mat64.Norm(x, 1)-mat64.Norm(x, 2))
+	return mat64.Dot(leastSquare, leastSquare)*0.5 + Lambda*(mat64.Norm(x, 1)-mat64.Norm(x, 2))
 }
