@@ -7,7 +7,7 @@ import (
 
 var (
 	IterTheta = 0
-	StopPDCA  = 9000
+	StopPDCA  = 1000
 )
 
 type proximalDCAlgorithmWithExtrapolation struct {
@@ -39,13 +39,7 @@ func MakeProximalDCAlgorithmWithExtrapolation(
 }
 
 func (p proximalDCAlgorithmWithExtrapolation) PDCA() *mat64.Vector {
-	p.thetaRestart()
-
-	p.beta = (p.thetaOld - 1.0) / p.theta
-
-	theta := (1.0 + math.Pow(1.0+4.0*p.theta*p.theta, 1.0/2.0)) * 0.5
-	p.thetaOld = p.theta
-	p.theta = theta
+	p.betaUpdate()
 
 	diff := mat64.NewVector(p.xk.Len(), nil)
 	diff.SubVec(p.xk, p.xkOld)
@@ -70,7 +64,19 @@ func (p proximalDCAlgorithmWithExtrapolation) PDCA() *mat64.Vector {
 	return p.PDCA()
 }
 
-func (p proximalDCAlgorithmWithExtrapolation) thetaRestart() {
+func (p *proximalDCAlgorithmWithExtrapolation) betaUpdate() {
+	p.thetaRestart()
+	p.beta = (p.thetaOld - 1.0) / p.theta
+	p.thetaUpdate()
+}
+
+func (p *proximalDCAlgorithmWithExtrapolation) thetaUpdate() {
+	theta := (1.0 + math.Pow(1.0+4.0*p.theta*p.theta, 1.0/2.0)) * 0.5
+	p.thetaOld = p.theta
+	p.theta = theta
+}
+
+func (p *proximalDCAlgorithmWithExtrapolation) thetaRestart() {
 
 	ykXk := mat64.NewVector(p.xk.Len(), nil)
 	ykXk.SubVec(p.yk, p.xk)
