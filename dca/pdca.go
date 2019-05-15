@@ -25,8 +25,8 @@ func MakeProximalDCAlgorithmWithExtrapolation(
 	x0 *mat64.Vector,
 	proximalOperator func(yk, xi *mat64.Vector) *mat64.Vector,
 	subGradient func(xk *mat64.Vector) *mat64.Vector,
-) proximalDCAlgorithmWithExtrapolation {
-	return proximalDCAlgorithmWithExtrapolation{
+) *proximalDCAlgorithmWithExtrapolation {
+	return &proximalDCAlgorithmWithExtrapolation{
 		xk:               x0,
 		xkOld:            x0,
 		yk:               x0,
