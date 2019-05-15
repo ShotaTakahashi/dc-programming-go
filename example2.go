@@ -24,13 +24,12 @@ var (
 )
 
 func main() {
-	dca.Iter = 0
 	x0 := mat64.NewVector(N, nil)
 	problem := dca.MakeProximalDCAlgorithmWithExtrapolation(x0, proximalOperator, subGradient)
 
 	start := time.Now()
-	opt := problem.PDCA()
-	fmt.Println(time.Since(start), objectFunc(opt), dca.Iter)
+	opt, iter := problem.PDCA()
+	fmt.Println(time.Since(start), objectFunc(opt), iter)
 }
 
 func proximalOperator(yk, xi *mat64.Vector) *mat64.Vector {
