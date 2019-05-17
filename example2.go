@@ -68,9 +68,15 @@ func subGradient(x *mat64.Vector) *mat64.Vector {
 	return subGradient
 }
 
+func objectFunc(x *mat64.Vector) float64 {
+	leastSquare := mat64.NewVector(M, nil)
+	leastSquare.MulVec(A, x)
+	leastSquare.SubVec(leastSquare, b)
+	return mat64.Dot(leastSquare, leastSquare)*0.5 + Lambda*(mat64.Norm(x, 1)-mat64.Norm(x, 2))
+}
+
 func makeMatrixA() *mat64.Dense {
 	data := make([]float64, N*M)
-	rand.Seed(42)
 	for i := range data {
 		data[i] = rand.NormFloat64()
 	}
@@ -86,7 +92,6 @@ func makeMatrixA() *mat64.Dense {
 
 func makeVectorB() *mat64.Vector {
 	data := make([]float64, N)
-	rand.Seed(42)
 	for _, i := range sampling(N) {
 		data[i] = rand.NormFloat64()
 	}
@@ -100,7 +105,6 @@ func makeVectorB() *mat64.Vector {
 
 func makeRandomVector(size int) *mat64.Vector {
 	data := make([]float64, size)
-	rand.Seed(42)
 	for i := range data {
 		data[i] = rand.NormFloat64()
 	}
@@ -114,26 +118,18 @@ func sampling(size int) []int {
 	for i := 0; i < size; i++ {
 		sample = append(sample, i)
 	}
-	rand.Seed(42)
 	rand.Shuffle(size, func(i, j int) { sample[i], sample[j] = sample[j], sample[i] })
 	sample = sample[:SPARSITY]
 	return sample
 }
 
 func maxEigenvalue() float64 {
-	data := mat64.NewDense(N, N, nil)
-	data.Mul(A.T(), A)
-	AtA := mat64.NewSymDense(N, data.RawMatrix().Data)
+	data := mat64.NewDense(M, M, nil)
+	data.Mul(A, A.T())
+	AtA := mat64.NewSymDense(M, data.RawMatrix().Data)
 	ok := eig.Factorize(AtA, true)
 	if !ok {
 		log.Fatal("Eigendecomposition failed")
 	}
 	return floats.Max(eig.Values(nil))
-}
-
-func objectFunc(x *mat64.Vector) float64 {
-	leastSquare := mat64.NewVector(M, nil)
-	leastSquare.MulVec(A, x)
-	leastSquare.SubVec(leastSquare, b)
-	return mat64.Dot(leastSquare, leastSquare)*0.5 + Lambda*(mat64.Norm(x, 1)-mat64.Norm(x, 2))
 }
