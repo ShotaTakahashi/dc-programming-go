@@ -56,11 +56,10 @@ func (p proximalDCAlgorithmWithExtrapolation) PDCA() (*mat64.Vector, int) {
 	xk := p.proximalOperator(yk, xi)
 
 	diff.SubVec(xk, p.xk)
-	if mat64.Norm(diff, 2)/math.Max(1.0, mat64.Norm(xk, 2)) < 1e-5 || p.iter > StopPDCA {
+	if mat64.Norm(diff, 2)/math.Max(1.0, mat64.Norm(p.xk, 2)) < 1e-5 || p.iter > StopPDCA {
 		return xk, p.iter
 	}
-	p.xkOld, p.xk = p.xk, xk
-	p.yk = yk
+	p.xkOld, p.xk, p.yk = p.xk, xk, yk
 	p.iter++
 	p.iterTheta++
 	return p.PDCA()
@@ -84,7 +83,7 @@ func (p *proximalDCAlgorithmWithExtrapolation) thetaRestart() {
 	xk := mat64.NewVector(p.xk.Len(), nil)
 	xk.SubVec(p.xk, p.xkOld)
 
-	if mat64.Dot(yk, xk) > 0 || p.iter > 200 {
+	if mat64.Dot(yk, xk) > 0 || p.iterTheta > 200 {
 		p.theta, p.thetaOld = 1.0, 1.0
 		if p.iterTheta > 200 {
 			p.iterTheta -= 200
