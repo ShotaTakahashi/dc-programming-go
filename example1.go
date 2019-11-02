@@ -13,17 +13,14 @@ func main() {
 	x0Elm := []float64{27.0 / 125.0}
 	x0 := mat64.NewVector(1, x0Elm)
 
-	dca.Iter = 0
 	t0 := time.Now()
 	opt, iter := dca.DCAlgorithm(x0, update)
 	fmt.Println(time.Since(t0), opt, iter)
 
-	dca.Iter = 0
 	t0 = time.Now()
 	opt, iter = dca.BDCAlgorithm(x0, update, obj)
 	fmt.Println(time.Since(t0), opt, iter)
 
-	dca.Iter = 0
 	t0 = time.Now()
 	opt, iter = dca.BDCAlgorithmQuadratic(x0, update, obj, grad)
 	fmt.Println(time.Since(t0), opt, iter)
